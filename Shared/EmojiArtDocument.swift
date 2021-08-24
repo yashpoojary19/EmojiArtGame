@@ -1,75 +1,84 @@
-//
-//  EmojiArtDocument.swift
-//  EmojiArtGame
-//
-//  Created by Yash Poojary on 22/08/21.
-//
+
 
 
 import SwiftUI
 
-class EmojiArtDocument: ObservableObject {
+class EmojiArtDocument: ObservableObject
 
-    @Published private(set) var emojiArt: EmojiArtModel {
+{
+    @Published private(set) var  emojiArt: EmojiArtModel {
         didSet {
             if emojiArt.background != oldValue.background {
-                fetchBackgrounImageDataIfNecessary()
-            }
-        }
-    }
-
-    init() {
-        emojiArt = EmojiArtModel()
-        emojiArt.addEmoji(text: "🚎", at: (-200, -100), size: 100)
-        emojiArt.addEmoji(text: "🚋", at: (50, 100), size: 50)
-    }
-
-    var emojis: [EmojiArtModel.Emoji] { emojiArt.emojis }
-    var background: EmojiArtModel.Background { emojiArt.background }
-
-
-    @Published var backgroundImage: UIImage?
-    
-    private func fetchBackgrounImageDataIfNecessary() {
-        backgroundImage = nil
-        switch emojiArt.background {
-        case .url(let url):
-            let imageData = try? Data(contentsOf: url)
-            if imageData != nil {
-                backgroundImage = UIImage(data: imageData!)
+                fetchBackgroundImageDataIfNecessary()
             }
             
+        }
+    }
+    
+    init() {
+        emojiArt = EmojiArtModel()
+        emojiArt.addEmoji(text: "🚎", at: (x: 30, y: 50), size: 40)
+        emojiArt.addEmoji(text: "🛺", at: (x: -30, y: 100), size: 100)
+    }
+    
+    var emojis: [EmojiArtModel.Emoji] {  emojiArt.emojis  }
+    var background: EmojiArtModel.Background {  emojiArt.background  }
+    
+    
+    @Published var backgroundImage: UIImage?
+    @Published var fetchBackgroundImageStatus = BackgroundImageFetchStatus.idle
+    
+    enum BackgroundImageFetchStatus {
+        case idle
+        case fetching
+    }
+    
+    private func fetchBackgroundImageDataIfNecessary() {
+        backgroundImage = nil
+        switch emojiArt.background {
+            case .url(let url):
+                fetchBackgroundImageStatus = .fetching
+                DispatchQueue.global(qos: .userInitiated).async {
+                let imageData = try? Data(contentsOf: url)
+                    DispatchQueue.main.async { [weak self] in
+                        if self?.emojiArt.background == EmojiArtModel.Background.url(url) {
+                            self?.fetchBackgroundImageStatus = .idle
+                            if imageData != nil {
+                                self?.backgroundImage = UIImage(data: imageData!)
+                                
+                                }
+                        }
+                }
+                    
+            }
         case .imageData(let data):
             backgroundImage = UIImage(data: data)
-        case .blank:
-            break
+        case .blank: break
         }
-         
     }
-    
     
     // MARK: - Intent(s)
+       func setBackground(_ background: EmojiArtModel.Background) {
+           emojiArt.background = background
+            print("background set to \(background)")
+       }
 
-    func setBackground(_ background: EmojiArtModel.Background) {
-        emojiArt.background = background
-        print("background set to \(background)")
-    }
-
-    func addEmoji(_ emoji: String, at location: (x: Int, y: Int), size: CGFloat) {
+       func addEmoji(_ emoji: String, at location: (x: Int, y: Int), size: CGFloat) {
         emojiArt.addEmoji(text: emoji, at: location, size: Int(size))
-    }
+       }
 
-    func moveEmoji(_ emoji: EmojiArtModel.Emoji, by offset: CGSize) {
-        if let index = emojiArt.emojis.index(matching: emoji) {
-            emojiArt.emojis[index].x += Int(offset.width)
-            emojiArt.emojis[index].y += Int(offset.height)
-        }
-    }
+       func moveEmoji(_ emoji: EmojiArtModel.Emoji, by offset: CGSize) {
+           if let index = emojiArt.emojis.index(matching: emoji) {
+               emojiArt.emojis[index].x += Int(offset.width)
+               emojiArt.emojis[index].y += Int(offset.height)
+           }
+       }
 
-    func scaleEmoji(_ emoji: EmojiArtModel.Emoji, by scale: CGFloat) {
-        if let index = emojiArt.emojis.index(matching: emoji) {
-            emojiArt.emojis[index].size = Int((CGFloat(emojiArt.emojis[index].size) * scale).rounded(.toNearestOrAwayFromZero))
-        }
-    }
-
+       func scaleEmoji(_ emoji: EmojiArtModel.Emoji, by scale: CGFloat) {
+           if let index = emojiArt.emojis.index(matching: emoji) {
+               emojiArt.emojis[index].size = Int((CGFloat(emojiArt.emojis[index].size) * scale).rounded(.toNearestOrAwayFromZero))
+           }
+       }
+    
 }
+
